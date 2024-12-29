@@ -99,20 +99,37 @@ const Canvas = () => {
 
   const loadCanvas = async () => {
     try {
+      console.log('Fetching canvas data from:', `${API_URL}/canvas`);
       const response = await axios.get(`${API_URL}/canvas`);
+      console.log('Canvas data received:', response.data);
+      
       const canvas = canvasRef.current;
+      if (!canvas) {
+        console.error('Canvas ref is null');
+        return;
+      }
+      
       const ctx = setupCanvas(canvas);
       
       // Draw all pixels
-      response.data.canvasData.forEach((color, index) => {
-        const x = index % GRID_SIZE;
-        const y = Math.floor(index / GRID_SIZE);
-        drawPixel(ctx, x, y, color);
-      });
+      if (Array.isArray(response.data.canvasData)) {
+        response.data.canvasData.forEach((color, index) => {
+          const x = index % GRID_SIZE;
+          const y = Math.floor(index / GRID_SIZE);
+          console.log(`Drawing pixel at (${x}, ${y}) with color ${color}`);
+          drawPixel(ctx, x, y, color);
+        });
+      } else {
+        console.error('Invalid canvas data:', response.data);
+      }
       
       drawGrid(ctx);
     } catch (error) {
       console.error('Error loading canvas:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
     }
   };
 
@@ -127,13 +144,21 @@ const Canvas = () => {
   const handleCanvasClick = async (e) => {
     if (!canPlace) return;
 
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / (PIXEL_SIZE * zoom));
-    const y = Math.floor((e.clientY - rect.top) / (PIXEL_SIZE * zoom));
-    
     try {
-      await axios.post(`${API_URL}/pixel`, { x, y, color: selectedColor });
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        console.error('Canvas ref is null');
+        return;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / (PIXEL_SIZE * zoom));
+      const y = Math.floor((e.clientY - rect.top) / (PIXEL_SIZE * zoom));
+      
+      console.log(`Placing pixel at (${x}, ${y}) with color ${selectedColor}`);
+      
+      const response = await axios.post(`${API_URL}/pixel`, { x, y, color: selectedColor });
+      console.log('Server response:', response.data);
       
       const ctx = canvas.getContext('2d');
       drawPixel(ctx, x, y, selectedColor);
@@ -153,6 +178,10 @@ const Canvas = () => {
       }, 1000);
     } catch (error) {
       console.error('Error placing pixel:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
     }
   };
 
