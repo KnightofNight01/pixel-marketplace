@@ -1,0 +1,11 @@
+{
+  "name": "pixel-marketplace",
+  "version": "1.0.0",
+  "description": "A r/place-like pixel art platform",
+  "scripts": {
+    "start": "cd frontend && npm start",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "author": "",
+  "license": "ISC"
+} 
