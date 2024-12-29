@@ -5,10 +5,12 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import axios from 'axios';
 
 const PIXEL_SIZE = 20;
-const GRID_SIZE = 50;
-const CANVAS_SIZE = PIXEL_SIZE * GRID_SIZE;
+const GRID_SIZE_X = 80;
+const GRID_SIZE_Y = 40;
+const CANVAS_WIDTH = PIXEL_SIZE * GRID_SIZE_X;
+const CANVAS_HEIGHT = PIXEL_SIZE * GRID_SIZE_Y;
 const COOLDOWN_TIME = 5000;
-const MIN_ZOOM = 1;
+const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 5;
 const ZOOM_SPEED = 0.1;
 const DEVICE_PIXEL_RATIO = window.devicePixelRatio || 1;
@@ -39,10 +41,10 @@ const Canvas = () => {
   const setupCanvas = (canvas) => {
     const ctx = canvas.getContext('2d');
     
-    canvas.width = CANVAS_SIZE * DEVICE_PIXEL_RATIO;
-    canvas.height = CANVAS_SIZE * DEVICE_PIXEL_RATIO;
-    canvas.style.width = `${CANVAS_SIZE}px`;
-    canvas.style.height = `${CANVAS_SIZE}px`;
+    canvas.width = CANVAS_WIDTH * DEVICE_PIXEL_RATIO;
+    canvas.height = CANVAS_HEIGHT * DEVICE_PIXEL_RATIO;
+    canvas.style.width = `${CANVAS_WIDTH}px`;
+    canvas.style.height = `${CANVAS_HEIGHT}px`;
     ctx.scale(DEVICE_PIXEL_RATIO, DEVICE_PIXEL_RATIO);
     
     ctx.imageSmoothingEnabled = false;
@@ -51,24 +53,31 @@ const Canvas = () => {
   };
 
   const drawGrid = (ctx) => {
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const imageData = canvas.getContext('2d').getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.putImageData(imageData, 0, 0);
+    }
+    
     ctx.strokeStyle = '#DDDDDD';
     ctx.lineWidth = 0.5;
 
-    for (let x = 0; x <= CANVAS_SIZE; x += PIXEL_SIZE) {
+    for (let x = 0; x <= CANVAS_WIDTH; x += PIXEL_SIZE) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, CANVAS_SIZE);
+      ctx.lineTo(x, CANVAS_HEIGHT);
       ctx.stroke();
     }
 
-    for (let y = 0; y <= CANVAS_SIZE; y += PIXEL_SIZE) {
+    for (let y = 0; y <= CANVAS_HEIGHT; y += PIXEL_SIZE) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(CANVAS_SIZE, y);
+      ctx.lineTo(CANVAS_WIDTH, y);
       ctx.stroke();
     }
 
-    // Draw hover effect
     if (hoverPixel && canPlace) {
       const { x, y } = hoverPixel;
       ctx.strokeStyle = '#000000';
@@ -85,30 +94,7 @@ const Canvas = () => {
   const drawPixel = (ctx, x, y, color) => {
     ctx.fillStyle = color;
     ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
-    
-    // Redraw grid lines around the pixel
-    ctx.strokeStyle = '#DDDDDD';
-    ctx.lineWidth = 0.5;
-    
-    ctx.beginPath();
-    ctx.moveTo(x * PIXEL_SIZE, y * PIXEL_SIZE);
-    ctx.lineTo(x * PIXEL_SIZE, (y + 1) * PIXEL_SIZE);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo((x + 1) * PIXEL_SIZE, y * PIXEL_SIZE);
-    ctx.lineTo((x + 1) * PIXEL_SIZE, (y + 1) * PIXEL_SIZE);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo(x * PIXEL_SIZE, y * PIXEL_SIZE);
-    ctx.lineTo((x + 1) * PIXEL_SIZE, y * PIXEL_SIZE);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo(x * PIXEL_SIZE, (y + 1) * PIXEL_SIZE);
-    ctx.lineTo((x + 1) * PIXEL_SIZE, (y + 1) * PIXEL_SIZE);
-    ctx.stroke();
+    drawGrid(ctx);
   };
 
   const loadCanvas = async () => {
@@ -125,11 +111,10 @@ const Canvas = () => {
       
       const ctx = setupCanvas(canvas);
       
-      // Draw all pixels
       if (Array.isArray(response.data.canvasData)) {
         response.data.canvasData.forEach((color, index) => {
-          const x = index % GRID_SIZE;
-          const y = Math.floor(index / GRID_SIZE);
+          const x = index % GRID_SIZE_X;
+          const y = Math.floor(index / GRID_SIZE_X);
           console.log(`Drawing pixel at (${x}, ${y}) with color ${color}`);
           drawPixel(ctx, x, y, color);
         });
@@ -150,7 +135,6 @@ const Canvas = () => {
   useEffect(() => {
     loadCanvas();
     
-    // Reload canvas every minute to get updates
     const interval = setInterval(loadCanvas, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -227,24 +211,28 @@ const Canvas = () => {
     const x = Math.floor((e.clientX - rect.left) / (PIXEL_SIZE * zoom));
     const y = Math.floor((e.clientY - rect.top) / (PIXEL_SIZE * zoom));
 
-    if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
-      setHoverPixel({ x, y });
-      const ctx = canvas.getContext('2d');
-      const currentCanvas = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      ctx.putImageData(currentCanvas, 0, 0);
-      drawGrid(ctx);
+    if (x >= 0 && x < GRID_SIZE_X && y >= 0 && y < GRID_SIZE_Y) {
+      if (!hoverPixel || hoverPixel.x !== x || hoverPixel.y !== y) {
+        setHoverPixel({ x, y });
+        const ctx = canvas.getContext('2d');
+        drawGrid(ctx);
+      }
     } else {
-      setHoverPixel(null);
+      if (hoverPixel) {
+        setHoverPixel(null);
+        const ctx = canvas.getContext('2d');
+        drawGrid(ctx);
+      }
     }
   };
 
   const handleMouseLeave = () => {
-    setHoverPixel(null);
-    if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
-      const currentCanvas = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      ctx.putImageData(currentCanvas, 0, 0);
-      drawGrid(ctx);
+    if (hoverPixel) {
+      setHoverPixel(null);
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext('2d');
+        drawGrid(ctx);
+      }
     }
   };
 
@@ -255,6 +243,7 @@ const Canvas = () => {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: '#1a1a1a',
       position: 'relative',
       overflow: 'hidden'
@@ -309,8 +298,8 @@ const Canvas = () => {
         <Box sx={{ position: 'relative' }}>
           <canvas
             ref={canvasRef}
-            width={CANVAS_SIZE}
-            height={CANVAS_SIZE}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
             style={{
               border: '1px solid #333',
               imageRendering: 'pixelated',

@@ -16,12 +16,16 @@ app.use(cors({
 
 app.use(express.json());
 
+// Canvas dimensions
+const GRID_SIZE_X = 80;
+const GRID_SIZE_Y = 40;
+
 // Canvas state
-let canvasData = new Array(50 * 50).fill('#FFFFFF'); // 50x50 white pixels
+let canvasData = new Array(GRID_SIZE_X * GRID_SIZE_Y).fill('#FFFFFF');
 
 // Reset canvas every 24 hours
 const resetCanvas = () => {
-  canvasData = new Array(50 * 50).fill('#FFFFFF');
+  canvasData = new Array(GRID_SIZE_X * GRID_SIZE_Y).fill('#FFFFFF');
   console.log('Canvas reset at:', new Date().toISOString());
 };
 
@@ -36,9 +40,9 @@ app.get('/api/canvas', (req, res) => {
 // Update pixel
 app.post('/api/pixel', (req, res) => {
   const { x, y, color } = req.body;
-  const index = y * 50 + x;
+  const index = y * GRID_SIZE_X + x;
   
-  if (index >= 0 && index < canvasData.length) {
+  if (x >= 0 && x < GRID_SIZE_X && y >= 0 && y < GRID_SIZE_Y) {
     canvasData[index] = color;
     res.json({ success: true });
   } else {
