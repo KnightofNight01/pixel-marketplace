@@ -34,6 +34,7 @@ const Canvas = () => {
   const [canPlace, setCanPlace] = useState(true);
   const [cooldownTime, setCooldownTime] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [hoverPixel, setHoverPixel] = useState(null);
 
   const setupCanvas = (canvas) => {
     const ctx = canvas.getContext('2d');
@@ -65,6 +66,19 @@ const Canvas = () => {
       ctx.moveTo(0, y);
       ctx.lineTo(CANVAS_SIZE, y);
       ctx.stroke();
+    }
+
+    // Draw hover effect
+    if (hoverPixel && canPlace) {
+      const { x, y } = hoverPixel;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(
+        x * PIXEL_SIZE,
+        y * PIXEL_SIZE,
+        PIXEL_SIZE,
+        PIXEL_SIZE
+      );
     }
   };
 
@@ -205,25 +219,59 @@ const Canvas = () => {
     });
   };
 
+  const handleMouseMove = (e) => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / (PIXEL_SIZE * zoom));
+    const y = Math.floor((e.clientY - rect.top) / (PIXEL_SIZE * zoom));
+
+    if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+      setHoverPixel({ x, y });
+      const ctx = canvas.getContext('2d');
+      const currentCanvas = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.putImageData(currentCanvas, 0, 0);
+      drawGrid(ctx);
+    } else {
+      setHoverPixel(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setHoverPixel(null);
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      const currentCanvas = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.putImageData(currentCanvas, 0, 0);
+      drawGrid(ctx);
+    }
+  };
+
   return (
     <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      gap: 2,
-      width: '100%',
-      position: 'relative'
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      backgroundColor: '#1a1a1a',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
       {/* Color Palette */}
       <Box sx={{ 
         display: 'flex', 
         gap: 1, 
-        mb: 2,
-        position: 'absolute',
-        top: 0,
+        position: 'fixed',
+        top: 20,
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: 1
+        zIndex: 2,
+        padding: '10px',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
       }}>
         {COLORS.map((color) => (
           <Button
@@ -233,9 +281,10 @@ const Canvas = () => {
               height: 32,
               minWidth: 'unset',
               backgroundColor: color,
-              border: selectedColor === color ? '2px solid black' : 'none',
+              border: selectedColor === color ? '3px solid #fff' : '1px solid #666',
               '&:hover': {
                 backgroundColor: color,
+                border: '3px solid #fff',
               },
             }}
             onClick={() => setSelectedColor(color)}
@@ -243,106 +292,74 @@ const Canvas = () => {
         ))}
       </Box>
 
-      <Box sx={{ 
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        width: '100%',
-        mt: 6
-      }}>
-        {/* Left Ad Space */}
-        <Box sx={{ 
-          width: 160, 
-          height: 600, 
-          bgcolor: '#f0f0f0',
-          border: '1px dashed #999',
+      {/* Canvas Container */}
+      <Box 
+        ref={containerRef}
+        sx={{ 
+          position: 'relative',
+          width: '100%',
+          height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#666',
-          flexShrink: 0
-        }}>
-          Ad Space
-        </Box>
-
-        {/* Canvas Container */}
-        <Box 
-          ref={containerRef}
-          sx={{ 
-            position: 'relative',
-            overflow: 'auto',
-            flex: 1,
-            display: 'flex',
-            justifyContent: 'center'
-          }}
-          onWheel={handleWheel}
-        >
-          <Box sx={{ position: 'relative' }}>
-            <canvas
-              ref={canvasRef}
-              width={CANVAS_SIZE}
-              height={CANVAS_SIZE}
-              style={{
-                border: '1px solid #ccc',
-                imageRendering: 'pixelated',
-                transform: `scale(${zoom})`,
-                cursor: canPlace ? 'pointer' : 'not-allowed'
+          overflow: 'auto'
+        }}
+        onWheel={handleWheel}
+      >
+        <Box sx={{ position: 'relative' }}>
+          <canvas
+            ref={canvasRef}
+            width={CANVAS_SIZE}
+            height={CANVAS_SIZE}
+            style={{
+              border: '1px solid #333',
+              imageRendering: 'pixelated',
+              transform: `scale(${zoom})`,
+              cursor: canPlace ? 'pointer' : 'not-allowed'
+            }}
+            onClick={handleCanvasClick}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onWheel={handleWheel}
+          />
+          {!canPlace && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '10px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '20px',
+                zIndex: 2,
+                fontSize: '16px',
+                fontWeight: 'bold'
               }}
-              onClick={handleCanvasClick}
-              onWheel={handleWheel}
-            />
-            {!canPlace && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: '10px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'rgba(0,0,0,0.7)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  zIndex: 2
-                }}
-              >
-                Wait {cooldownTime}s
-              </Box>
-            )}
-            
-            {/* Zoom Controls */}
-            <Box sx={{ 
-              position: 'absolute', 
-              bottom: 10, 
-              right: 10, 
-              backgroundColor: 'white',
-              borderRadius: '4px',
-              boxShadow: 2,
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              <IconButton onClick={handleZoomIn} disabled={zoom >= MAX_ZOOM}>
-                <AddIcon />
-              </IconButton>
-              <IconButton onClick={handleZoomOut} disabled={zoom <= MIN_ZOOM}>
-                <RemoveIcon />
-              </IconButton>
+            >
+              Wait {cooldownTime}s
             </Box>
+          )}
+          
+          {/* Zoom Controls */}
+          <Box sx={{ 
+            position: 'absolute', 
+            bottom: 20, 
+            right: 20, 
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: '8px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <IconButton onClick={handleZoomIn} disabled={zoom >= MAX_ZOOM}>
+              <AddIcon />
+            </IconButton>
+            <IconButton onClick={handleZoomOut} disabled={zoom <= MIN_ZOOM}>
+              <RemoveIcon />
+            </IconButton>
           </Box>
-        </Box>
-
-        {/* Right Ad Space */}
-        <Box sx={{ 
-          width: 160, 
-          height: 600, 
-          bgcolor: '#f0f0f0',
-          border: '1px dashed #999',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#666',
-          flexShrink: 0
-        }}>
-          Ad Space
         </Box>
       </Box>
     </Box>
