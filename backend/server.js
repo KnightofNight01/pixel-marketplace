@@ -7,7 +7,8 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'https://pixelmania.netlify.app',
-    'https://pixel-marketplace.netlify.app'
+    'https://pixel-marketplace.netlify.app',
+    'https://pixelmaniax.netlify.app'
   ],
   methods: ['GET', 'POST'],
   credentials: true
