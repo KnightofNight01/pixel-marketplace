@@ -4,7 +4,11 @@ const app = express();
 
 // CORS configuration for production
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://pixelmania.netlify.app'],
+  origin: [
+    'http://localhost:3000',
+    'https://pixelmania.netlify.app',
+    'https://pixel-marketplace.netlify.app'
+  ],
   methods: ['GET', 'POST'],
   credentials: true
 }));
