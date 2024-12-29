@@ -244,7 +244,7 @@ const Canvas = () => {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#1a1a1a',
+      backgroundColor: '#FFFFFF',
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -270,10 +270,10 @@ const Canvas = () => {
               height: 32,
               minWidth: 'unset',
               backgroundColor: color,
-              border: selectedColor === color ? '3px solid #fff' : '1px solid #666',
+              border: selectedColor === color ? '3px solid #000' : '1px solid #666',
               '&:hover': {
                 backgroundColor: color,
-                border: '3px solid #fff',
+                border: '3px solid #000',
               },
             }}
             onClick={() => setSelectedColor(color)}
@@ -301,7 +301,7 @@ const Canvas = () => {
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
             style={{
-              border: '1px solid #333',
+              border: '1px solid #ccc',
               imageRendering: 'pixelated',
               transform: `scale(${zoom})`,
               cursor: canPlace ? 'pointer' : 'not-allowed'
